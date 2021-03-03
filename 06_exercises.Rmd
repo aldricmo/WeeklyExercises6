@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -37,6 +37,7 @@ library(patchwork)     # for nicely combining ggplot2 graphs
 library(gt)            # for creating nice tables
 library(rvest)         # for scraping data
 library(robotstxt)     # for checking if you can scrape data
+library(readr)
 theme_set(theme_minimal())
 ```
 
@@ -72,12 +73,24 @@ Once your repository is created, you should always open your **project** rather 
 ## Your first `shiny` app 
 
   1. This app will also use the COVID data. Make sure you load that data and all the libraries you need in the `app.R` file you create. Below, you will post a link to the app that you publish on shinyapps.io. You will create an app to compare states' cumulative number of COVID cases over time. The x-axis will be number of days since 20+ cases and the y-axis will be cumulative cases on the log scale (`scale_y_log10()`). We use number of days since 20+ cases on the x-axis so we can make better comparisons of the curve trajectories. You will have an input box where the user can choose which states to compare (`selectInput()`) and have a submit button to click once the user has chosen all states they're interested in comparing. The graph should display a different line for each state, with labels either on the graph or in a legend. Color can be used if needed. 
-  
+
+https://aldricmo.shinyapps.io/CovidApp/
+
 ## Warm-up exercises from tutorial
 
   2. Read in the fake garden harvest data. Find the data [here](https://github.com/llendway/scraping_etc/blob/main/2020_harvest.csv) and click on the `Raw` button to get a direct link to the data. 
   
+```{r}
+fake_garden_harvest <- read_csv("https://raw.githubusercontent.com/llendway/scraping_etc/main/2020_harvest.csv")
+```
+  
   3. Read in this [data](https://www.kaggle.com/heeraldedhia/groceries-dataset) from the kaggle website. You will need to download the data first. Save it to your project/repo folder. Do some quick checks of the data to assure it has been read in appropriately.
+  
+```{r}
+Groceries_dataset <- read_csv("Groceries_dataset.csv", 
+    col_types = cols(Member_number = col_number(), 
+        Date = col_date(format = "%d-%m-%Y")))
+```
 
   4. CHALLENGE(not graded): Write code to replicate the table shown below (open the .html file to see it) created from the `garden_harvest` data as best as you can. When you get to coloring the cells, I used the following line of code for the `colors` argument:
   
@@ -88,12 +101,75 @@ colors = scales::col_numeric(
       ) %>% as.character()
 ```
 
-![](garden_table.html){width=600, height=1000}
-
-
   5. Create a table using `gt` with data from your project or from the `garden_harvest` data if your project data aren't ready.
   
-  6. Use `patchwork` operators and functions to combine at least two graphs using your project data or `garden_harvest` data if your project data aren't read.
-  
+```{r}
+library(gt)
 
+garden_harvest %>%
+  filter(vegetable == "beets", 
+         variety != "leaves") %>%
+  select(-vegetable, -units) %>%
+  group_by(variety) %>% 
+  mutate(cumulative_weight = cumsum(weight)) %>% 
+  gt(
+     groupname_col = "variety") %>% 
+  tab_header(title = "Vegetable Harvests",
+             subtitle = "Grams") %>% 
+  tab_options(column_labels.background.color = "green")
+```
+  
+  6. Use `patchwork` operators and functions to combine at least two graphs using your project data or `garden_harvest` data if your project data aren't read. (This looks much better when made fullscreen)
+  
+```{r}
+tomatoesonly <-
+  garden_harvest %>% 
+    filter(vegetable == "tomatoes")
+  
+graphA <- tomatoesonly %>% 
+  ggplot(aes(x = weight)) +
+  geom_histogram(fill = "tomato3") +
+  geom_vline(xintercept = 601.6)
+
+  garden_harvest %>% 
+    filter(vegetable == "tomatoes") %>%
+    group_by(variety) %>% 
+    mutate(mean_weight = mean(weight))
+
+tomatoesonly <-
+ garden_harvest %>% 
+    filter(vegetable == "tomatoes") %>%
+    group_by(variety) %>% 
+    mutate(mean_weight = mean(weight))
+  
+graphB <- tomatoesonly %>% 
+  ggplot(aes(x = weight)) +
+  geom_histogram(fill = "tomato3", bins = 20) +
+  facet_wrap(~ variety) +
+  geom_vline(aes(xintercept = (tomatoesonly$mean_weight))) +
+  ggtitle("Tomato Harvest Distribution by Variety") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+garden_harvest %>% 
+  filter(vegetable == "tomatoes") %>%
+  summarize(mean_weight = mean(weight))
+
+graphC <- garden_harvest %>% 
+  filter(vegetable == "tomatoes") %>%
+  group_by(variety) %>%
+  mutate(mean_weight = mean(weight),
+         Above_weight_average = if_else(mean_weight > 601, "True", "False",),
+         count = n()) %>%
+  ggplot(aes(x = count, y = fct_reorder(variety, count))) + 
+  geom_col(aes(fill = Above_weight_average)) +
+  scale_fill_manual(values = c("orange1","royalblue")) +
+  labs(title = "Tomato Variety Prevalence", 
+       x = "Count",
+       y = "Variety",
+       caption = "by Aldric Martinez-Olson. Weight average = 601")
+
+graphA|graphC + 
+  plot_annotation(title = "Joined Plots")
+```
+  
 **DID YOU REMEMBER TO UNCOMMENT THE OPTIONS AT THE TOP?**

@@ -1,0 +1,13 @@
+name: CovidApp
+title: CovidApp
+username:
+account: aldricmo
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3728574
+bundleId: 4295694
+url: https://aldricmo.shinyapps.io/CovidApp/
+when: 1614784509.60937
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: 05_exercises.html|06_exercises.Rmd|Covid_App.R|Groceries_dataset.csv|README.md
